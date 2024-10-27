@@ -39,7 +39,7 @@ python run_blending_gradio.py
 <img src="water.png" alt="alt text" width="800">
 
 ### 2. Pix2Pix implementation.
-
+Assignments/02_DIPwithPyTorch/Pix2Pix/val_results/epoch_100
 
 
 因为显卡限制所以批次改到了20.
@@ -61,12 +61,12 @@ python train.py
 
 因为批次改到了20,而且数据集也换了稍大一些的cityscapes,所以下面只是迭代100次的结果示例,(loss因为关机了没保存,只有验证集图像)更多信息参考train_result和val_result
 
-![result_1](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\Pix2Pix\val_results\epoch_100\result_1.png)
+<img src="Pix2Pix/val_results/epoch_100/result_1.png" alt="alt text" width="800">
 
-![result_2](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\Pix2Pix\val_results\epoch_100\result_2.png)
+<img src="Pix2Pix/val_results/epoch_100/result_2.png" alt="alt text" width="800">
 
-![result_3](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\Pix2Pix\val_results\epoch_100\result_3.png)
+<img src="Pix2Pix/val_results/epoch_100/result_3.png" alt="alt text" width="800">
 
-![result_4](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\Pix2Pix\val_results\epoch_100\result_4.png)
+<img src="Pix2Pix/val_results/epoch_100/result_4.png" alt="alt text" width="800">
 
-![result_5](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\Pix2Pix\val_results\epoch_100\result_5.png)
+<img src="Pix2Pix/val_results/epoch_100/result_5.png" alt="alt text" width="800">
