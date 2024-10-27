@@ -105,10 +105,40 @@ def create_mask_from_points(points, img_h, img_w):
     Returns:
         np.ndarray: Binary mask of shape (img_h, img_w).
     """
+
     mask = np.zeros((img_h, img_w), dtype=np.uint8)
     ### FILL: Obtain Mask from Polygon Points. 
     ### 0 indicates outside the Polygon.
     ### 255 indicates inside the Polygon.
+
+    # 射线法判断点是否为多边形内点
+    # 用meshgrid加速计算
+    y_grid, x_grid = np.mgrid[0:img_h, 0:img_w]
+    x_flat = x_grid.ravel()
+    y_flat = y_grid.ravel()
+
+    # 计算每个边起点终点
+    x_poly = points[:, 0]
+    y_poly = points[:, 1]
+    x_poly_roll = np.roll(x_poly, -1)
+    y_poly_roll = np.roll(y_poly, -1)
+
+    x1 = x_poly[:, np.newaxis]
+    y1 = y_poly[:, np.newaxis]
+    x2 = x_poly_roll[:, np.newaxis]
+    y2 = y_poly_roll[:, np.newaxis]
+
+    # 条件1判断和过点水平线的相交边
+    cond1 = ((y1 <= y_flat) & (y2 > y_flat)) | ((y1 > y_flat) & (y2 <= y_flat))
+    # 条件2限定过点线为向右的射线,不等号右边为过点水平线与边的交点
+    cond2 = x_flat < (x2 - x1) * (y_flat - y1) / (y2 - y1 + 1e-10) + x1
+
+    # 过点水平向右射线与多边形交点为奇数时,点在多边形内部
+    crossings = np.sum(cond1 & cond2, axis=0)
+    mask_flat = crossings % 2 == 1
+
+    # 恢复mask为二维
+    mask = mask_flat.reshape((img_h, img_w)).astype(np.uint8) * 255
 
     return mask
 
@@ -126,11 +156,64 @@ def cal_laplacian_loss(foreground_img, foreground_mask, blended_img, background_
     Returns:
         torch.Tensor: The computed Laplacian loss.
     """
-    loss = torch.tensor(0.0, device=foreground_img.device)
+    loss = torch.tensor(0.0)
     ### FILL: Compute Laplacian Loss with https://pytorch.org/docs/stable/generated/torch.nn.functional.conv2d.html.
     ### Note: The loss is computed within the masks.
 
+    pos1 = torch.nonzero(foreground_mask)
+    x1 = pos1[0, 0]
+    y1 = pos1[0, 1]
+    pos2 = torch.nonzero(background_mask)
+    x2 = pos2[0, 0]
+    y2 = pos2[0, 1]
+
+    # 计算平移量
+    dy = y2 - y1
+    dx = x2 - x1
+
+    # 定义拉普拉斯核
+    laplacian_kernel = torch.tensor([[0, 1, 0],
+                                     [1, -4, 1],
+                                     [0, 1, 0]], dtype=torch.float32, device=foreground_img.device).unsqueeze(0).unsqueeze(0)
+    # 扩展核的维度以匹配图像通道数
+    laplacian_kernel = laplacian_kernel.expand(foreground_img.shape[1], 1, 3, 3)
+
+    # 应用拉普拉斯算子
+    foreground_laplacian = torch.nn.functional.conv2d(foreground_img, laplacian_kernel, padding=1, groups=foreground_img.shape[1])
+    blended_laplacian = torch.nn.functional.conv2d(blended_img, laplacian_kernel, padding=1, groups=blended_img.shape[1])
+
+    # 平移前景的拉普拉斯特征和掩码
+    _, _, H, W = foreground_laplacian.shape
+    foreground_laplacian_shifted = torch.zeros_like(foreground_laplacian)
+    # 沿宽度方向平移
+    if dx > 0:
+        x_start = dx
+        x_end = W
+        foreground_laplacian_shifted[:, x_start:x_end] = foreground_laplacian[:, :W - dx]
+    elif dx < 0:
+        x_start = 0
+        x_end = W + dx
+        foreground_laplacian_shifted[:, x_start:x_end] = foreground_laplacian[:, -dx:]
+    else:
+        foreground_laplacian_shifted[:, :] = foreground_laplacian[:, :]
+    
+    # 沿高度方向平移
+    if dy > 0:
+        y_start = dy
+        y_end = H
+        foreground_laplacian_shifted[y_start:y_end, :] = foreground_laplacian_shifted[:H - dy, :]
+    elif dy < 0:
+        y_start = 0
+        y_end = H + dy
+        foreground_laplacian_shifted[y_start:y_end, :] = foreground_laplacian_shifted[-dy:, :]
+
+
+    # 计算拉普拉斯损失
+    loss = torch.nn.functional.mse_loss(foreground_laplacian_shifted * background_mask,
+                                 blended_laplacian * background_mask)
+
     return loss
+
 
 # Perform Poisson image blending
 def blending(foreground_image_original, background_image_original, dx, dy, polygon_state):
@@ -150,18 +233,25 @@ def blending(foreground_image_original, background_image_original, dx, dy, polyg
     if not polygon_state['closed'] or background_image_original is None or foreground_image_original is None:
         return background_image_original  # Return original background if conditions are not met
 
-    # Convert images to numpy arrays
-    foreground_np = np.array(foreground_image_original)
-    background_np = np.array(background_image_original)
 
     # Get polygon points and shift them by dx and dy
     foreground_polygon_points = np.array(polygon_state['points']).astype(np.int64)
     background_polygon_points = foreground_polygon_points + np.array([int(dx), int(dy)]).reshape(1, 2)
-
+    
+    # Convert images to numpy arrays
+    foreground_np_temp = np.array(foreground_image_original)
+    background_np = np.array(background_image_original)
+    foreground_np = np.zeros_like(background_np)
+    x_min = np.min(background_polygon_points[:, 0])  
+    x_max = np.max(background_polygon_points[:, 0])  
+    y_min = np.min(background_polygon_points[:, 1])  
+    y_max = np.max(background_polygon_points[:, 1])
+    foreground_np[y_min-2:y_max+2, x_min-2:x_max+2] = foreground_np_temp[y_min-dy-2:y_max-dy+2, x_min-dx-2:x_max-dx+2]
+    
     # Create masks from polygon points
-    foreground_mask = create_mask_from_points(foreground_polygon_points, foreground_np.shape[0], foreground_np.shape[1])
+    foreground_mask = create_mask_from_points(background_polygon_points, background_np.shape[0], background_np.shape[1])
     background_mask = create_mask_from_points(background_polygon_points, background_np.shape[0], background_np.shape[1])
-
+    
     # Convert numpy arrays to torch tensors
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'  # Using CPU will be slow
     fg_img_tensor = torch.from_numpy(foreground_np).to(device).permute(2, 0, 1).unsqueeze(0).float() / 255.

@@ -6,6 +6,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from facades_dataset import FacadesDataset
+from edges2shoes_dataset import Edges2shoesDataset
+from cityscapes_dataset import CityscapesDataset
 from FCN_network import FullyConvNetwork
 from torch.optim.lr_scheduler import StepLR
 
@@ -140,18 +142,19 @@ def main():
     """
     # Set device to GPU if available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(device)
 
     # Initialize datasets and dataloaders
-    train_dataset = FacadesDataset(list_file='train_list.txt')
-    val_dataset = FacadesDataset(list_file='val_list.txt')
+    train_dataset = CityscapesDataset(list_file='train_list.txt')
+    val_dataset = CityscapesDataset(list_file='val_list.txt')
 
-    train_loader = DataLoader(train_dataset, batch_size=100, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=100, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=20, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=20, shuffle=False, num_workers=4)
 
     # Initialize model, loss function, and optimizer
     model = FullyConvNetwork().to(device)
     criterion = nn.L1Loss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.5, 0.999))
+    optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=(0.5, 0.999))
 
     # Add a learning rate scheduler for decay
     scheduler = StepLR(optimizer, step_size=200, gamma=0.2)
@@ -171,4 +174,6 @@ def main():
             torch.save(model.state_dict(), f'checkpoints/pix2pix_model_epoch_{epoch + 1}.pth')
 
 if __name__ == '__main__':
+
     main()
+    

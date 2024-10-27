@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import gradio as gr
-
+from scipy.interpolate import griddata
 # 初始化全局变量，存储控制点和目标点
 points_src = []
 points_dst = []
@@ -49,9 +49,61 @@ def point_guided_deformation(image, source_pts, target_pts, alpha=1.0, eps=1e-8)
     """
     
     warped_image = np.array(image)
-    ### FILL: 基于MLS or RBF 实现 image warping
+    new_image = np.zeros_like(warped_image)
+    
+    height, width = warped_image.shape[:2]
+    grid_size = 10
 
-    return warped_image
+    x_points = np.arange(0, width, grid_size)
+    y_points = np.arange(0, height, grid_size)
+
+    if width % grid_size != 0:
+        x_points = np.append(x_points, width - 1)
+    if height % grid_size != 0:
+        y_points = np.append(y_points, height - 1)
+
+    grid_x, grid_y = np.meshgrid(x_points, y_points)
+    new_grid_x = np.zeros_like(grid_x)
+    new_grid_y = np.zeros_like(grid_y)
+    A = np.zeros((2,2))
+
+    source_pts, target_pts = target_pts, source_pts
+
+    for i in range(grid_x.shape[0]):
+        for j in range(grid_y.shape[1]):
+            v = np.array([grid_x[i, j], grid_y[i, j]])
+            new_v = np.zeros(2)
+           
+            w = 1.0 / (eps + np.power(np.linalg.norm(source_pts - v, axis=1), (2. * alpha)))
+            p_star = np.sum(np.transpose([w, w]) * source_pts, axis=0) / np.sum(w)
+            q_star = np.sum(np.transpose([w, w]) * target_pts, axis=0) / np.sum(w)
+            p_hat = source_pts - p_star
+            q_hat = target_pts - q_star
+            p_hat_verti = np.column_stack([-p_hat[:, 1], p_hat[:, 0]])
+            temp = v - p_star
+            temp_verti = np.array([-temp[1], temp[0]])
+            for k in range(source_pts.shape[0]):
+                A = w[k] * np.vstack((p_hat[k], -p_hat_verti[k])).dot(np.vstack((temp, -temp_verti)).T)
+                new_v += q_hat[k].dot(A)
+            new_v = np.linalg.norm(v - p_star) * new_v / np.linalg.norm(new_v) + q_star
+            new_grid_x[i,j], new_grid_y[i,j] = new_v
+
+    full_grid_x, full_grid_y = np.meshgrid(np.arange(0, width), np.arange(0, height))
+
+    new_full_x = griddata((grid_x.ravel(), grid_y.ravel()), new_grid_x.ravel(),
+                        (full_grid_x, full_grid_y), method='linear')
+
+    new_full_y = griddata((grid_x.ravel(), grid_y.ravel()), new_grid_y.ravel(),
+                        (full_grid_x, full_grid_y), method='linear')
+    
+    map_x = np.clip(np.floor(new_full_x).astype(int), 0, width - 1)
+    map_y = np.clip(np.floor(new_full_y).astype(int), 0, height - 1)
+
+    for i in range(height):
+        for j in range(width):
+            new_image[i, j] = warped_image[map_y[i, j], map_x[i, j]]
+
+    return new_image
 
 def run_warping():
     global points_src, points_dst, image ### fetch global variables
@@ -91,4 +143,4 @@ with gr.Blocks() as demo:
     clear_button.click(clear_points, None, point_select)
     
 # 启动 Gradio 应用
-demo.launch()
+demo.launch(share=True)

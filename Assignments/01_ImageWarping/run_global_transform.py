@@ -21,12 +21,26 @@ def apply_transform(image, scale, rotation, translation_x, translation_y, flip_h
     ### FILL: Apply Composition Transform 
     # Note: for scale and rotation, implement them around the center of the image （围绕图像中心进行放缩和旋转）
 
+    rows = transformed_image.shape[0]
+    cols = transformed_image.shape[1]
+    # scale and rotation
+    M = cv2.getRotationMatrix2D(((cols-1)/2.0,(rows-1)/2.0),rotation,scale)
+    transformed_image = cv2.warpAffine(transformed_image,M,(cols,rows), borderValue=(255, 255, 255))
+    # flip
+    if flip_horizontal:
+        transformed_image = cv2.flip(transformed_image, 1)
+    # translation_x
+    M = np.float32([[1,0,translation_x],[0,1,0]])
+    transformed_image = cv2.warpAffine(transformed_image,M,(cols,rows), borderValue=(255, 255, 255))
+    # translation_y
+    M = np.float32([[1,0,0],[0,1,translation_y]])
+    transformed_image = cv2.warpAffine(transformed_image,M,(cols,rows), borderValue=(255, 255, 255))
     return transformed_image
 
 # Gradio Interface
 def interactive_transform():
     with gr.Blocks() as demo:
-        gr.Markdown("## Image Transformation Playground")
+        gr.Markdown("## David Playground")
         
         # Define the layout
         with gr.Row():
@@ -61,4 +75,4 @@ def interactive_transform():
     return demo
 
 # Launch the Gradio interface
-interactive_transform().launch()
+interactive_transform().launch(share=True)
