@@ -59,7 +59,7 @@ python train.py
 
 ## Result
 
-因为批次改到了20,而且数据集也换了稍大一些的cityscapes,所以下面只是迭代100次的结果示例,(loss因为关机了没保存,只有验证集图像)更多信息参考train_result和val_result
+因为批次改到了20,而且数据集也换了稍大一些的cityscapes,所以下面只是迭代100次的结果示例,(loss因为关机了没保存,只有验证集图像)更多信息参考train_result和val_result,论文中用了个判别器和L1loss结合来构造loss,代码中只用了L1loss,并且也没迭代很多次,所以结果还是有挺多模糊的地方
 
 <img src="Pix2Pix/val_results/epoch_100/result_1.png" alt="alt text" width="800">
 
