@@ -25,8 +25,8 @@ python gradio_app.py --share
 ## Result
 
 主界面如下,依旧可以选点变换,增加了表情模版选项,直接选择模板可以让人物直接进行变换,简单弄了两个闭眼和闭嘴模板,因为原实现要自定义图片需要先用PTI转换,并未加进本次作业实现中.
-![image-20241120112320851](C:\Users\94791\AppData\Roaming\Typora\typora-user-images\image-20241120112320851.png)
+![image-20241120112320851](1.png)
 
-![image-20241120112705910](C:\Users\94791\AppData\Roaming\Typora\typora-user-images\image-20241120112705910.png)
+![image-20241120112705910](2.png)
 
-![image-20241120112833583](C:\Users\94791\AppData\Roaming\Typora\typora-user-images\image-20241120112833583.png)
+![image-20241120112833583](3.png)
