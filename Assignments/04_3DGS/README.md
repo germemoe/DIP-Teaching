@@ -19,7 +19,7 @@ python train.py --colmap_dir data/chair --checkpoint_dir data/chair/checkpoints
 ```
 
 ### Result
-机位31在80次迭代的渲染图如下,
+机位31在80次迭代的渲染图如下,loss在0.027左右
 
 
 ![r_31](data/chair/checkpoints/debug_images/epoch_0080/r_31.png)
