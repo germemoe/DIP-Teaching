@@ -74,13 +74,15 @@ class GaussianModel(nn.Module):
         """Initialize opacities in logit space for sigmoid activation"""
         # Initialize to high opacity (sigmoid(8.0) ≈ 0.9997)
         self.opacities = nn.Parameter(
-            8.0 * torch.ones((self.n_points, 1), dtype=torch.float32)
+            -1.0 * torch.ones((self.n_points, 1), dtype=torch.float32)
+            # 8.0 * torch.ones((self.n_points, 1), dtype=torch.float32)
         )
 
     def _compute_rotation_matrices(self) -> torch.Tensor:
         """Convert quaternions to 3x3 rotation matrices"""
         # Normalize quaternions to unit length
         q = F.normalize(self.rotations, dim=-1)
+
         w, x, y, z = q.unbind(-1)
         
         # Build rotation matrix elements
@@ -104,11 +106,11 @@ class GaussianModel(nn.Module):
         """Compute covariance matrices for all gaussians"""
         # Get rotation matrices
         R = self._compute_rotation_matrices()
-        
         # Convert scales from log space and create diagonal matrices
         scales = torch.exp(self.scales)
         S = torch.diag_embed(scales)
-        
+        rs = R @ S
+        Covs3d = rs @ rs.transpose(1, 2)
         # Compute covariance
         ### FILL:
         ### Covs3d = ...
@@ -117,6 +119,16 @@ class GaussianModel(nn.Module):
 
     def get_gaussian_params(self) -> GaussianParameters:
         """Get all gaussian parameters in world space"""
+        if torch.isnan(self.positions).any():
+            print("jb")
+        if torch.isnan(self.colors).any():
+            print("jb")
+        if torch.isnan(self.opacities).any():
+            print("jb")
+        if torch.isnan(self.rotations).any():
+            print("jb")
+        if torch.isnan(self.scales).any():
+            print("jb")
         return GaussianParameters(
             positions=self.positions,
             colors=torch.sigmoid(self.colors),

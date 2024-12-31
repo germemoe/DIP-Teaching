@@ -191,60 +191,61 @@ class GaussianTrainer:
         return loss.item(), rendered_images
 
     def train(self, train_loader: DataLoader):
-        """Main training loop"""
-        # Select fixed indices for debugging
-        if self.debug_indices is None:
-            dataset_size = len(train_loader.dataset)
-            self.debug_indices = np.random.choice(
-                dataset_size, 
-                min(self.config.debug_samples, dataset_size), 
-                replace=False
-            )
-        
-        for epoch in range(self.config.num_epochs):
-            # Training loop
-            pbar = tqdm(train_loader, desc=f"Epoch {epoch}")
-            epoch_loss = 0.0
-            num_batches = 0
+        with torch.autograd.detect_anomaly():
+            """Main training loop"""
+            # Select fixed indices for debugging
+            if self.debug_indices is None:
+                dataset_size = len(train_loader.dataset)
+                self.debug_indices = np.random.choice(
+                    dataset_size, 
+                    min(self.config.debug_samples, dataset_size), 
+                    replace=False
+                )
             
-            for batch_idx, batch in enumerate(pbar):
-                # Training step
-                loss, rendered_images = self.train_step(batch)
-                epoch_loss += loss
-                num_batches += 1
+            for epoch in range(self.config.num_epochs):
+                # Training loop
+                pbar = tqdm(train_loader, desc=f"Epoch {epoch}")
+                epoch_loss = 0.0
+                num_batches = 0
                 
-                # Update progress bar
-                avg_loss = epoch_loss / num_batches
-                pbar.set_postfix({'loss': f"{avg_loss:.4f}"})
-            
-            # Save checkpoint
-            if epoch % self.config.save_every == 0:
-                self.save_checkpoint(epoch)
+                for batch_idx, batch in enumerate(pbar):
+                    # Training step
+                    loss, rendered_images = self.train_step(batch)
+                    epoch_loss += loss
+                    num_batches += 1
+                    
+                    # Update progress bar
+                    avg_loss = epoch_loss / num_batches
+                    pbar.set_postfix({'loss': f"{avg_loss:.4f}"})
                 
-            # Save debug images every N epochs
-            if epoch % self.config.debug_every == 0:
-                debug_batches = []
-                for idx in self.debug_indices:
-                    debug_batches.append(train_loader.dataset[idx])
-                
-                # Stack debug batches
-                debug_batch = {
-                    k: torch.stack([b[k] for b in debug_batches], 0) 
-                    if torch.is_tensor(debug_batches[0][k])
-                    else [b[k] for b in debug_batches]
-                    for k in debug_batches[0].keys()
-                }
-                
-                # Get rendered images for debug batch
-                with torch.no_grad():
-                    debug_rendered = self.train_step(debug_batch, in_train=False)
-                
-                # Save debug images
-                self.save_debug_images(
-                    epoch=epoch,
-                    rendered_images=debug_rendered,
-                    gt_images=debug_batch['image'],
-                    image_paths=debug_batch['image_path']
+                # Save checkpoint
+                if epoch % self.config.save_every == 0 or epoch % 77 == 0:
+                    self.save_checkpoint(epoch)
+                    
+                # Save debug images every N epochs
+                if epoch % self.config.debug_every == 0:
+                    debug_batches = []
+                    for idx in self.debug_indices:
+                        debug_batches.append(train_loader.dataset[idx])
+                    
+                    # Stack debug batches
+                    debug_batch = {
+                        k: torch.stack([b[k] for b in debug_batches], 0) 
+                        if torch.is_tensor(debug_batches[0][k])
+                        else [b[k] for b in debug_batches]
+                        for k in debug_batches[0].keys()
+                    }
+                    
+                    # Get rendered images for debug batch
+                    with torch.no_grad():
+                        debug_rendered = self.train_step(debug_batch, in_train=False)
+                    
+                    # Save debug images
+                    self.save_debug_images(
+                        epoch=epoch,
+                        rendered_images=debug_rendered,
+                        gt_images=debug_batch['image'],
+                        image_paths=debug_batch['image_path']
                 )
 
 def parse_args():

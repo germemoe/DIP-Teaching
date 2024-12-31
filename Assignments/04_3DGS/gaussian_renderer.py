@@ -1,4 +1,9 @@
+from os import system
+from turtle import width
+from scipy import linalg
+import sklearn.naive_bayes
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Tuple
@@ -41,6 +46,10 @@ class GaussianRenderer(nn.Module):
         
         # 3. Project to screen space using camera intrinsics
         screen_points = cam_points @ K.T  # (N, 3)
+
+        if (screen_points[..., 2:3] == 0).any():
+            print("jb")
+
         means2D = screen_points[..., :2] / screen_points[..., 2:3] # (N, 2)
         
         # 4. Transform covariance to camera space and then to 2D
@@ -48,14 +57,43 @@ class GaussianRenderer(nn.Module):
         J_proj = torch.zeros((N, 2, 3), device=means3D.device)
         ### FILL:
         ### J_proj = ...
-        
+
+        tx, ty, tz = torch.unbind(cam_points, dim=-1)
+        tz2 = tz**2
+        width = self.W
+        height = self.H
+        fx = K[..., 0, 0, None]
+        fy = K[..., 1, 1, None]
+        cx = K[..., 0, 2, None]
+        cy = K[..., 1, 2, None]
+        tan_fovx = 0.5 * width / fx
+        tan_fovy = 0.5 * height / fy
+
+        lim_x_pos = (width - cx) / fx + 0.3 * tan_fovx
+        lim_x_neg = cx / fx + 0.3 * tan_fovx
+        lim_y_pos = (height - cy) / fy + 0.3 * tan_fovy
+        lim_y_neg = cy / fy + 0.3 * tan_fovy
+        tx = tz * torch.clamp(tx / tz, min=-lim_x_neg, max=lim_x_pos)
+        ty = tz * torch.clamp(ty / tz, min=-lim_y_neg, max=lim_y_pos)
+
+        O = torch.zeros(N, device=cam_points.device, dtype=cam_points.dtype)
+        J_proj = torch.stack(
+            [fx / tz, O, -fx * tx / tz2, O, fy / tz, -fy * ty / tz2], dim=-1
+        ).reshape(N, 2, 3)
         # Transform covariance to camera space
         ### FILL: Aplly world to camera rotation to the 3d covariance matrix
         ### covs_cam = ...  # (N, 3, 3)
-        
+        covs_cam = R @ covs3d @ R.T
         # Project to 2D
         covs2D = torch.bmm(J_proj, torch.bmm(covs_cam, J_proj.permute(0, 2, 1)))  # (N, 2, 2)
-        
+
+        if torch.isnan(means2D).any():
+            print("jb")
+        if torch.isnan(covs2D).any():
+            print("jb")
+        if torch.isnan(depths).any():
+            print("jb")
+
         return means2D, covs2D, depths
 
     def compute_gaussian_values(
@@ -77,7 +115,25 @@ class GaussianRenderer(nn.Module):
         # Compute determinant for normalization
         ### FILL: compute the gaussian values
         ### gaussian = ... ## (N, H, W)
-    
+        det = (
+            covs2D[..., 0, 0] * covs2D[..., 1, 1]
+            - covs2D[..., 0, 1] * covs2D[..., 1, 0]
+        )
+        det = det.clamp(min=1e-4)
+
+        covs2D_inv = torch.zeros_like(covs2D)
+        covs2D_inv[..., 0, 0] = covs2D[..., 1, 1] / det
+        covs2D_inv[..., 1, 1] = covs2D[..., 0, 0] / det
+        covs2D_inv[..., 1, 0] = -(covs2D[..., 0, 1] + covs2D[..., 1, 0]) / 2.0 / det
+        covs2D_inv[..., 0, 1] = -(covs2D[..., 0, 1] + covs2D[..., 1, 0]) / 2.0 / det
+
+        # P = -0.5 * torch.einsum('npki,nij,npkj->npk', dx, torch.linalg.inv(covs2D), dx)
+        P = (-0.5 * dx.unsqueeze(-2) @ covs2D_inv.unsqueeze(1).unsqueeze(1) @ dx.unsqueeze(-1)).clamp(max = 80)
+        # c = (2*torch.pi*torch.sqrt(torch.linalg.det(covs2D))).unsqueeze(1).unsqueeze(2).repeat(1, H, W)
+        # gaussian = torch.exp(P)/c
+        gaussian = torch.exp(P).squeeze(-1).squeeze(-1)
+        if torch.isinf(gaussian).any():
+            raise NotImplementedError('00000000000000nan')
         return gaussian
 
     def forward(
@@ -111,17 +167,19 @@ class GaussianRenderer(nn.Module):
         
         # 5. Apply valid mask
         gaussian_values = gaussian_values * valid_mask.view(N, 1, 1)  # (N, H, W)
-        
+
         # 6. Alpha composition setup
-        alphas = opacities.view(N, 1, 1) * gaussian_values  # (N, H, W)
+        alphas = torch.clamp_max(opacities.view(N, 1, 1) * gaussian_values, 0.999)  # (N, H, W)
         colors = colors.view(N, 3, 1, 1).expand(-1, -1, self.H, self.W)  # (N, 3, H, W)
         colors = colors.permute(0, 2, 3, 1)  # (N, H, W, 3)
         
         # 7. Compute weights
         ### FILL:
         ### weights = ... # (N, H, W)
-        
+        T = torch.cumprod(1 - alphas, dim = 0)
+        weights = alphas * T
         # 8. Final rendering
         rendered = (weights.unsqueeze(-1) * colors).sum(dim=0)  # (H, W, 3)
-        
         return rendered
+
+
