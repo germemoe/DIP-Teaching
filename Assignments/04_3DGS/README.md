@@ -22,8 +22,8 @@ python train.py --colmap_dir data/chair --checkpoint_dir data/chair/checkpoints
 机位31在80次迭代的渲染图如下,
 
 
-![r_31](data\chair\checkpoints\debug_images\epoch_0080\r_31.png)
+![r_31](data/chair/checkpoints/debug_images/epoch_0080/r_31.png)
 
 debug视频如下
 
-![debug_rendering](data\chair\checkpoints\debug_rendering.gif)
+![debug_rendering](data/chair/checkpoints/debug_rendering.gif)
