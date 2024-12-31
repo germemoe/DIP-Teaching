@@ -61,12 +61,12 @@ python train.py
 
 因为批次改到了20,而且数据集也换了稍大一些的cityscapes,所以下面只是迭代100次的结果示例,(loss因为关机了没保存,只有验证集图像)更多信息参考train_result和val_result
 
-![result_1](Pix2Pix\val_results\epoch_100\result_1.png)
+![result_1](Pix2Pix/val_results/epoch_100/result_1.png)
 
-![result_2](Pix2Pix\val_results\epoch_100\result_2.png)
+![result_2](Pix2Pix/val_results/epoch_100/result_2.png)
 
-![result_3](Pix2Pix\val_results\epoch_100\result_3.png)
+![result_3](Pix2Pix/val_results/epoch_100/result_3.png)
 
-![result_4](Pix2Pix\val_results\epoch_100\result_4.png)
+![result_4](Pix2Pix/val_results/epoch_100/result_4.png)
 
-![result_5](Pix2Pix\val_results\epoch_100\result_5.png)
+![result_5](Pix2Pix/val_results/epoch_100/result_5.png)
