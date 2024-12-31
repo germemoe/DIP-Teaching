@@ -32,11 +32,11 @@ python run_blending_gradio.py
 
 ## Result
 
-![equation](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\equation.png)
+![equation](equation.png)
 
-![monolisa](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\monolisa.png)
+![monolisa](monolisa.png)
 
-![water](E:\USTC\DIP\DIP-Teaching\Assignments\02_DIPwithPyTorch\water.png)
+![water](water.png)
 
 ### 2. Pix2Pix implementation.
 
