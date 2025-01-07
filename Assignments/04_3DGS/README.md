@@ -28,7 +28,7 @@ debug视频如下
 
 ![debug_rendering](data/chair/checkpoints/chair.gif)
 
-lego在200次迭代的渲染图如下,lego比凳子精细效果不是很好,colmap也只跑出97张照片(本来100)
+lego在200次迭代的渲染图如下,lego比凳子精细而且原图分辨率比chair低不少所以效果不是很好,colmap也只跑出97张照片(本来100)
 ![r_74](data/lego/checkpoints/debug_images/epoch_0199/r_74.png)
 
 debug视频如下
