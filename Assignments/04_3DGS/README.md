@@ -22,8 +22,15 @@ python train.py --colmap_dir data/chair --checkpoint_dir data/chair/checkpoints
 chair在200次迭代的渲染图如下
 
 
-![r_31](data/chair/checkpoints/debug_images/epoch_0199/r_31.png)
+![r_51](data/chair/checkpoints/debug_images/epoch_0199/r_51.png)
 
 debug视频如下
 
 ![debug_rendering](data/chair/checkpoints/chair.gif)
+
+lego在200次迭代的渲染图如下,lego比凳子精细效果不是很好,colmap也只跑出97张照片(本来100)
+![r_74](data/lego/checkpoints/debug_images/epoch_0199/r_74.png)
+
+debug视频如下
+
+![debug_rendering](data/lego/checkpoints/lego.gif)
