@@ -59,6 +59,7 @@ class GaussianRenderer(nn.Module):
         ### J_proj = ...
 
         tx, ty, tz = torch.unbind(cam_points, dim=-1)
+        tz = tz.clamp(min = 1e-4)
         tz2 = tz**2
         width = self.W
         height = self.H
